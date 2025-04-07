@@ -7,12 +7,23 @@ const cors = require('cors');
 
 const app = express();
 
-//conexion a la base de datos
+/*conexion a la base de datos
 const connection = mysql.createConnection({
   host: 'localhost',
   user: 'ctapasco',
   password: 'Soy290692..',
   database: 'escaner_db'
+});*/
+
+require('dotenv').config();
+const mysql = require('mysql2');
+
+const connection = mysql.createConnection({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT, 
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME
 });
 
 //prueba de conexion

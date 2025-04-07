@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>burroVago</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #result { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>VagoBurry</h1>
+
+  <button onclick="modoBuscar()">Buscar producto</button>
+  <button onclick="modoRegistrar()">Registrar producto</button>
+  <button onclick="modoModificar()">modificar un producto</button>
+
+  <br><br>
+  <div id="reader" style="width:300px;"></div>
+  
+  <div id="registro" style="display:none;">
+    <h3>Registrar nuevo producto</h3>
+    <input id="nombre" placeholder="Nombre del producto"><br><br>
+    <input id="ubicacion" placeholder="Ubicación (Ej: Estante A1)"><br><br>
+    <button onclick="guardarProducto()">Guardar</button>
+  </div>
+
+  <script>
+    let modo = ''; 
+    let codigoEscaneado = '';
+    let scanner = null;
+
+    
+    const BASE_URL = 'https://ff93-86-127-229-98.ngrok-free.app';
+
+    function modoBuscar() {
+      modo = 'buscar';
+      iniciarEscaneo();
+    }
+
+    function modoRegistrar() {
+      modo = 'registrar';
+      iniciarEscaneo();
+    }
+
+    function modoModificar() {
+      modo = 'modificar';
+      iniciarEscaneo();
+    }
+
+    function iniciarEscaneo() {
+      if (scanner) scanner.stop(); 
+      scanner = new Html5Qrcode("reader");
+      scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText, decodedResult) => {
+          scanner.stop();
+          if (modo === 'buscar') {
+            buscarProducto(decodedText);
+          } else if (modo === 'registrar') {
+            prepararRegistro(decodedText);
+          }else if (modo === 'modificar'){
+            prepararModificacion(decodedText);
+          }
+        }
+      );
+    }
+
+    function buscarProducto(codigo) {
+      fetch(`${BASE_URL}/api/productos/${codigo}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            alert(`Producto no encontrado: ${codigo}`);
+          } else {
+            alert(`"${data.nombre}" está ubicado en: ${data.ubicacion}`);
+          }
+        });
+    }
+
+    function prepararRegistro(codigo) {
+      fetch(`${BASE_URL}/api/productos/${codigo}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            document.getElementById('registro').style.display = 'block';
+            codigoEscaneado = codigo;
+          } else {
+            alert(`Este producto ya está registrado como "${data.nombre}" en "${data.ubicacion}"`);
+          }
+        });
+    }
+
+    function prepararModificacion(codigo) {
+  const ubicacion = document.getElementById('ubicacion').value;
+
+  fetch(`${BASE_URL}/api/productos/${codigo}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ubicacion })
+  }).then(res => {
+    if (res.ok) {
+      alert('✅ Producto modificado');
+      document.getElementById('registro').style.display = 'none';
+    } else {
+      res.json().then(data => alert(` Error: ${data.error}`));
+    }
+  });
+}
+
+
+
+    function guardarProducto() {
+      const nombre = document.getElementById('nombre').value;
+      const ubicacion = document.getElementById('ubicacion').value;
+      fetch(`${BASE_URL}/api/productos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo: codigoEscaneado, nombre, ubicacion })
+      }).then(res => {
+        if (res.ok) {
+          alert(' Producto guardado');
+          document.getElementById('registro').style.display = 'none';
+        } else {
+          res.json().then(data => alert(`Error: ${data.error}`));
+        }
+      });
+    }
+  </script>
+</body>
+</html>
